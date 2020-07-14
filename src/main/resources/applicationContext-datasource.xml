@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!-- 同样扫描“com.mmall” -->
+    <context:component-scan base-package="com.mmall" annotation-config="true"/>
+
+    <!-- 引用数据库配置文件：datasource.properties -->
+    <bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="order" value="2"/>
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="locations">
+            <list>
+                <value>classpath:datasource.properties</value>
+            </list>
+        </property>
+        <property name="fileEncoding" value="utf-8"/>
+    </bean>
+
+
+    <context:property-placeholder location="classpath:datasource.properties"/>
+
+    <!-- 数据库配置 -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${db.driverClassName}"/>
+        <property name="url" value="${db.url}"/>
+        <property name="username" value="${db.username}"/>
+        <property name="password" value="${db.password}"/>
+        <!-- 连接池启动时的初始值 -->
+        <property name="initialSize" value="${db.initialSize}"/>
+        <!-- 连接池的最大值 -->
+        <property name="maxActive" value="${db.maxActive}"/>
+        <!-- 最大空闲值.当经过一个高峰时间后，连接池可以慢慢将已经用不到的连接慢慢释放一部分，一直减少到maxIdle为止 -->
+        <property name="maxIdle" value="${db.maxIdle}"/>
+        <!-- 最小空闲值.当空闲的连接数少于阀值时，连接池就会预申请去一些连接，以免洪峰来时来不及申请 -->
+        <property name="minIdle" value="${db.minIdle}"/>
+        <!-- 最大建立连接等待时间。如果超过此时间将接到异常。设为－1表示无限制 -->
+        <property name="maxWait" value="${db.maxWait}"/>
+        <!--#给出一条简单的sql语句进行验证 -->
+         <!--<property name="validationQuery" value="select getdate()" />-->
+        <property name="defaultAutoCommit" value="${db.defaultAutoCommit}"/>
+        <!-- 回收被遗弃的（一般是忘了释放的）数据库连接到连接池中 -->
+         <!--<property name="removeAbandoned" value="true" />-->
+        <!-- 数据库连接过多长时间不用将被视为被遗弃而收回连接池中 -->
+         <!--<property name="removeAbandonedTimeout" value="120" />-->
+        <!-- #连接的超时时间，默认为半小时。 -->
+        <property name="minEvictableIdleTimeMillis" value="${db.minEvictableIdleTimeMillis}"/>
+
+        <!--# 失效检查线程运行时间间隔，要小于MySQL默认-->
+        <property name="timeBetweenEvictionRunsMillis" value="40000"/>
+        <!--# 检查连接是否有效-->
+        <property name="testWhileIdle" value="true"/>
+        <!--# 检查连接有效性的SQL语句-->
+        <property name="validationQuery" value="SELECT 1 FROM dual"/>
+    </bean>
+
+    <!-- Mybatis的SessionFactory配置：这里用于生产Mapper层的代理对象！ -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--这里需要一个DataSource-->
+        <property name="dataSource" ref="dataSource"/>
+
+        <!--
+        由于我们Mybatis使用.xml的方式开发，这里还需要指定加载 *Dao.xml 配置文件
+        这样代理对象就可以通过 *Dao.xml 找到相应的方法，并可以使用这些方法。
+        -->
+        <property name="mapperLocations" value="classpath*:mappers/*Mapper.xml"></property>
+
+        <!-- 分页插件 -->
+        <property name="plugins">
+            <array>
+                <bean class="com.github.pagehelper.PageHelper">
+                    <property name="properties">
+                        <value>
+                            dialect=mysql
+                        </value>
+                    </property>
+                </bean>
+            </array>
+        </property>
+
+    </bean>
+
+    <!-- Mybatis的 dao 文件识别 -->
+    <!--
+    这里扫描 *Dao.java 接口文件，并创建 Dao 层接口的对象。
+    这样我们就不需要在 Mapper接口中使用 @Repository 来加 Dao 层的对象放入spring容器，因此上面扫描注解的时候只扫描service层即可！
+    不需要扫描 Dao 层，也不需要扫描web层。（全部扫描也没有关系）
+    另外，上面配置的SqlSession 会将这里的 Dao 层接口的对象转换为代理对象！
+     -->
+    <bean name="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.mmall.dao"/>
+    </bean>
+
+    <!-- 使用@Transactional进行声明式事务管理需要声明下面这行 -->
+    <!--开启事务注解的支持，指定事务管理器-->
+    <tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+    <!-- 事务管理 -->
+    <!--先创建spring自带的事务管理器的对象放入容器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="rollbackOnCommitFailure" value="true"/>
+    </bean>
+    <!-- 这样我们就配置了事务管理器，并开启事务注解，就可以在需要使用事务管理的java文件使用事务注解-->
+
+</beans>
