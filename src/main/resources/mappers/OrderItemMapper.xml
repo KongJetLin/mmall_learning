@@ -163,4 +163,45 @@
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>
+
+  <!-- 根据用户id与订单号，查询这个用户的这个订单中，有多少个订单项 -->
+  <select id="getOrderByOrderNoUserId" resultMap="BaseResultMap" parameterType="map">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order_item
+    where order_no = #{orderNo}
+    and user_id = #{userId}
+  </select>
+
+  <!-- 批量插入 OrderItem对象 -->
+  <insert id="batchInsert" parameterType="list">
+    insert into mmall_order_item (id, order_no,user_id, product_id,
+    product_name, product_image, current_unit_price,
+    quantity, total_price, create_time,
+    update_time)
+    values
+    <foreach collection="orderItemList" index="index" item="item" separator=",">
+      (
+      #{item.id},#{item.orderNo},#{item.userId},#{item.productId},#{item.productName},#{item.productImage},#{item.currentUnitPrice},#{item.quantity},#{item.totalPrice},now(),now()
+      )
+    </foreach>
+  </insert>
+
+  <!-- 根据订单号，查询出所有的 OrderItem -->
+  <select id="getByOrderNo" parameterType="long" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order_item
+    where order_no = #{orderNo}
+  </select>
+
+  <!-- 根据订单号和用户id，查询出所有的 OrderItem -->
+  <select id="getByOrderNoUserId" parameterType="map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order_item
+    where order_no = #{orderNo}
+    and user_id = #{userId}
+  </select>
+
 </mapper>

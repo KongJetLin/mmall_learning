@@ -151,4 +151,70 @@
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>
+
+  <!-- checkUsername ：检查用户是否存在，返回查询的用户的数量 -->
+  <select id="checkUsername" resultType="int" parameterType="string">
+    select count(1) from mmall_user
+    where username = #{username}
+  </select>
+
+  <!-- 如果查询的方法有多个参数进行，使用map封装（这里有username与password） -->
+  <select id="selectLogin" resultMap="BaseResultMap" parameterType="map">
+    select
+--       这里不要用select * ，可能查询出很多你不需要的字段
+    <include refid="Base_Column_List" />
+    from mmall_user
+    where username = #{username}
+    and password = #{password}
+  </select>
+
+  <!-- checkEmail：检查邮箱是否已经存在 -->
+  <select id="checkEmail" resultType="int" parameterType="string">
+    select count(1) from mmall_user
+    where email = #{email}
+  </select>
+
+  <!-- selectQuestionByUsername ： 查询用户的密码提示问题-->
+  <select id="selectQuestionByUsername" resultType="string" parameterType="string">
+    select
+    question
+    from mmall_user
+    where username = #{username}
+  </select>
+
+  <!-- checkAnswer：校验用户密码提示答案是否正确，根据用户名、密码提示问题，密码提示答案，看查询出来的结构个数 -->
+  <select id="checkAnswer" parameterType="map" resultType="int">
+    select
+    count(1)
+    from mmall_user
+    where username = #{username}
+    and question = #{question}
+    and answer = #{answer}
+  </select>
+
+  <!-- 根据用户名更新密码，注意添加更新时间 （对数据库数据有更改，必须添加更新时间或创建时间） -->
+  <update id="updatePasswordByUsername" parameterType="map">
+    update mmall_user
+    set password = #{passwordNew} , update_time = now()
+    where username = #{username}
+  </update>
+
+  <!-- 根据用户id查询密码是否正确 -->
+  <select id="checkPassword" parameterType="map" resultType="int">
+    select count(1)
+    from mmall_user
+    where password = #{password}
+    and id = #{userId}
+  </select>
+
+  <!-- 检查email是否存在，如果存在的话，该email是否属于其他用户。
+   如果该email存在且属于其他用户，返回 拥有这个email的其他用户的数量，那么这时这个email是不合法的
+   -->
+  <select id="checkEmailByUserId" parameterType="map" resultType="int">
+    select count(1)
+    from mmall_user
+    where email = #{email}
+    and id != #{userId}
+  </select>
+
 </mapper>

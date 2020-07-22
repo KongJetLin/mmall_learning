@@ -198,4 +198,40 @@
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>
+
+  <!-- 根据用户id与订单号，查询某个订单对象是否存在 -->
+  <select id="selectByUserIdAndOrderNo" parameterType="map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order
+    where user_id = #{userId}
+    and order_no = #{orderNo}
+  </select>
+
+  <!-- 根据订单号查询对应的订单对象是否存在 -->
+  <select id="selectByOrderNo" parameterType="long" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order
+    where order_no = #{orderNo}
+  </select>
+
+  <!-- 根据 -->
+  <select id="selectByUserId" parameterType="int" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order
+    where user_id = #{userId}
+    order by create_time desc
+  </select>
+
+  <!-- 查询所有的订单：将越晚创建的放在越前面 -->
+  <select id="selectAllOrder" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order
+    order by create_time desc
+  </select>
+
+
 </mapper>

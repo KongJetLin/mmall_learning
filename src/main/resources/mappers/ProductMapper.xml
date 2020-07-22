@@ -176,4 +176,56 @@
       update_time = now()
     where id = #{id,jdbcType=INTEGER}
   </update>
+
+  <!-- 查询所有产品的信息，并封装为产品集合
+    升序查询，这里不要加分号，因为后面PageHelper会加上分页条件 limit...加分号SQL语句会出错
+    -->
+  <select id="selectList" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from mmall_product
+    order by id asc
+  </select>
+
+  <!-- 根据id查询，或者根据name模糊查询
+  注意这里的多种写法，这里使用where标签，如果某一个为空，会自动跳到下一个，某个不为null，会将这里的 and或or 替换
+  即变成 where id = ? 或 where name like ?，这种标签写法是很好的。如果and前面没有where，and就不会去除
+  -->
+  <select id="selectByNameAndProductId" resultMap="BaseResultMap" parameterType="map">
+    select
+    <include refid="Base_Column_List" />
+    from mmall_product
+    <where>
+      <if test="productName != null">
+        and name like #{productName}
+      </if>
+      <if test="productId != null">
+        and id = #{productId}
+      </if>
+    </where>
+  </select>
+
+  <!-- 根据keyword 或者 categoryList 查询Product
+  1) 首先，商品必须在售
+  2) 这里使用 in，查询多个category的数据，需要遍历categoryList
+   -->
+  <select id="selectByNameAndCategoryIds" parameterType="map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from mmall_product
+    where status = 1
+    <if test="productName != null">
+      and name like #{productName}
+    </if>
+    <if test="categoryIdList != null">
+      and category in
+
+      <foreach collection="categoryIdList" item="item" index="index" open="(" separator="," close=")">
+        #{item}
+      </foreach>
+
+    </if>
+
+  </select>
+
 </mapper>
