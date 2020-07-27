@@ -168,4 +168,13 @@ public class Const
         }
     }
 
+//---------------------------------------------------------------二期常量
+
+    //Redis 中各个量的缓存时间
+    public interface RedisCacheExTime
+    {
+        int REDIS_SESSION_EXTIME = 60 * 30;//Session的缓存时间为 30分钟
+    }
+
+
 }

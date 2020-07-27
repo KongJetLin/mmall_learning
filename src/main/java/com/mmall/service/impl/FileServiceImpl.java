@@ -3,6 +3,7 @@ package com.mmall.service.impl;
 import com.google.common.collect.Lists;
 import com.mmall.service.IFileService;
 import com.mmall.util.FTPUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,10 +14,11 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Service("iFileService")
+@Slf4j
 public class FileServiceImpl implements IFileService
 {
     //日志
-    private Logger logger = LoggerFactory.getLogger(FileServiceImpl.class);
+//    private Logger logger = LoggerFactory.getLogger(FileServiceImpl.class);
 
     //上传文件的方法
     @Override
@@ -32,7 +34,7 @@ public class FileServiceImpl implements IFileService
         String uploadFileName = UUID.randomUUID().toString()+"."+fileExtensionName;
 
         //打印日志
-        logger.info("开始上传文件，上传文件的文件名:{},上传的路径:{},新文件名:{}",fileName , path , uploadFileName);
+        log.info("开始上传文件，上传文件的文件名:{},上传的路径:{},新文件名:{}",fileName , path , uploadFileName);
 
         /** 2、下面开始上传文件 */
         //首先创建文件夹 path，因为我们的文件要放到 path的文件夹链下，因此必须先创建文件夹
@@ -60,7 +62,7 @@ public class FileServiceImpl implements IFileService
         }
         catch (IOException e)
         {
-            logger.error("上传文件异常",e);
+            log.error("上传文件异常",e);
             return null;
         }
 //        System.out.println("------------------------------------------------------");

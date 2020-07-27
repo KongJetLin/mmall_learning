@@ -1,10 +1,14 @@
 package com.mmall.controller.portal;
 
 import com.mmall.common.Const;
+import com.mmall.common.RedisPool;
 import com.mmall.common.ResponseCode;
 import com.mmall.common.ServerResponse;
 import com.mmall.pojo.User;
 import com.mmall.service.IUserService;
+import com.mmall.util.CookieUtil;
+import com.mmall.util.JsonUtil;
+import com.mmall.util.RedisPoolUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -13,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 /**
@@ -34,14 +40,23 @@ public class UserController
      */
     @RequestMapping(value = "login.do",method = RequestMethod.POST)
     @ResponseBody //将返回的数据序列化为JSON
-    public ServerResponse<User> login(String username , String password , HttpSession session)
+    public ServerResponse<User> login(String username , String password , HttpSession session , HttpServletResponse httpServletResponse)
     {
         ServerResponse<User> response = iUserService.login(username, password);
 
         //如果登录成功，将用户设置到Session中
         if(response.isSuccess())
         {
-            session.setAttribute(Const.CURRENT_USER , response.getData());//将ServerResponse的User对象存储到Session
+//            session.setAttribute(Const.CURRENT_USER , response.getData());//将ServerResponse的User对象存储到Session
+            /**
+            如果登录成功，我们不再将用户信息User对象存储到Session，
+             1）而是将User对象序列化为字符串，随后按键值对的形式：session的id ： User序列化后的字符串 的形式，将其存储到redis，并设置过期时间。
+            2）同时，将session对应的id：JSESSIONID 通过 response 写回客户端浏览器，并将这个cookie命名为："mmall_login_token"
+
+             2步：将 sessionid 写入redis缓存、将保存sessionid 的cookie通过response返回给客户端浏览器！
+             */
+            CookieUtil.writeLoginToken(httpServletResponse , session.getId());//将保存有JSESSIONID的cookie写回浏览器
+            RedisPoolUtil.setEx(session.getId() , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
         }
         //不管有没有登录成功，我们都将ServerResponse 对象 response 返回，这样前端会根据接收的信息展示不同的提示
         return response;
@@ -49,15 +64,26 @@ public class UserController
 
     /**
      * 用户登出
-     * @param session
+     * @param httpServletRequest
+     * @param httpServletResponse
      * @return
      */
     @RequestMapping(value = "logout.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<String> logout(HttpSession session)
+    public ServerResponse<String> logout(HttpServletRequest httpServletRequest , HttpServletResponse httpServletResponse)
     {
-        //将Session中的用户对象删除
-        session.removeAttribute(Const.CURRENT_USER);
+        /**
+        在登出的时候，先通过 delLoginToken() 方法，通过响应将客户端的保存 sessionid 的cookie删除
+         我们同样读取请求中的"mmall_login_token"cookie的值（必须在删除前获取），将redis中存储的用户信息也删除！
+         删除：1）存储sessionid的cookie；2）通过 sessionid:User 键值对存储在redis的用户信息
+         */
+        String loginToken = CookieUtil.readLoginToken(httpServletRequest);//先获取sessionid
+        CookieUtil.delLoginToken(httpServletRequest , httpServletResponse);//将存储sessionid的cookie设置为过期
+        RedisPoolUtil.del(loginToken);//根据sessionid，将redis中的用户信息也删除
+
+//        //将Session中的用户对象删除
+//        session.removeAttribute(Const.CURRENT_USER);
+
         //返回一个只有状态码值 “0” （表示登出成功）的 ServerResponse<String> 对象
         return ServerResponse.createBySuccessMessage("退出成功");
     }
@@ -90,19 +116,32 @@ public class UserController
 
     /**
      * 登录成功后，获取登录用户信息
-     * @param session
+     * @param httpServletRequest
      * @return
      */
     @RequestMapping(value = "get_user_info.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<User> getUserInfo(HttpSession session)
+    public ServerResponse<User> getUserInfo(HttpServletRequest httpServletRequest)
     {
-        User user = (User) session.getAttribute(Const.CURRENT_USER);
+//        User user = (User) session.getAttribute(Const.CURRENT_USER);
+        /**
+        我们不再从session中获取user对象，而是从请求中获取名为 "mmall_login_token" 的cookie的值 sessionid，即登录时的sessionid，
+         这里将其称之为loginToken。
+         */
+        String loginToken = CookieUtil.readLoginToken(httpServletRequest);
+        if(StringUtils.isEmpty(loginToken))
+        {
+            return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
+        }
+
+        //如果获取到sessionid，从redis将User对象字符串取出，并反序列化
+        String userJsonStr = RedisPoolUtil.get(loginToken);//先通过jedis将相应的User对象字符串获取到
+        User user = JsonUtil.string2Obj(userJsonStr , User.class);//再将User字符反序列化为User对象
         if(user != null)
         {
             return ServerResponse.createBySuccess(user);
         }
-
+        //也有可能因为 redis 中User字符串过期，这里无法获取到，那么也显示未登录
         return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
     }
 
