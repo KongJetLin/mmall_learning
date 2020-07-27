@@ -7,6 +7,7 @@ import com.mmall.dao.UserMapper;
 import com.mmall.pojo.User;
 import com.mmall.service.IUserService;
 import com.mmall.util.MD5Util;
+import com.mmall.util.RedisPoolUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -131,7 +132,10 @@ public class UserServiceImpl implements IUserService
              后面用户提交新的密码的时候，也会将 token 带回来，我们需要在本地取缓存取出 token 进行比较。
              */
             String forgetToken = UUID.randomUUID().toString();
-            TokenCache.setKey(TokenCache.TOKEN_PREFIX+username , forgetToken);//将 token 设置到guava缓存
+
+//            TokenCache.setKey(TokenCache.TOKEN_PREFIX+username , forgetToken);//将 token 设置到guava缓存
+            //我们不再将token存储到guava缓存，而是将其存储到 redis 缓存，并设置有效时间为12小时
+            RedisPoolUtil.setEx(Const.TOKEN_PREFIX+username , forgetToken , 60*60*12);
             return ServerResponse.createBySuccess(forgetToken);//将 token 返回
         }
 
@@ -152,7 +156,10 @@ public class UserServiceImpl implements IUserService
             return ServerResponse.createByErrorMessage("参数错误,token需要传递");
 
         //获取本地 token，检查其是否过期
-        String token = TokenCache.getKey(TokenCache.TOKEN_PREFIX + username);
+//        String token = TokenCache.getKey(TokenCache.TOKEN_PREFIX + username);
+        //不再从guava缓存中获取token，而是从redis缓存中获取
+        String token = RedisPoolUtil.get(Const.TOKEN_PREFIX+username);
+
         if(org.apache.commons.lang3.StringUtils.isBlank(token))
             return ServerResponse.createByErrorMessage("token无效或者过期");
 

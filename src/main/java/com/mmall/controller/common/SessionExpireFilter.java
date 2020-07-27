@@ -35,7 +35,8 @@ public class SessionExpireFilter implements Filter
         //3、判断logintoken是否为空或者""，如果不为空的话，符合条件，继续拿user信息
         if(StringUtils.isNotEmpty(loginToken))
         {
-            //3.1 首先，我们需要从redis将用户信息取出，若用户信息不为空，我们才可以根据 sessionid 更新 redis 中该用户信息对应的键值对 ：sessionid:String(User) 的过期时间重新设置为30分钟
+            //3.1 首先，我们需要从redis将用户信息取出，若用户信息不为空，
+            // 我们才可以根据 sessionid 更新 redis 中该用户信息对应的键值对 ：sessionid:String(User) 的过期时间重新设置为30分钟
             String userJsonStr = RedisPoolUtil.get(loginToken);
             User user = JsonUtil.string2Obj(userJsonStr , User.class);
             if(user != null)

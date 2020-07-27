@@ -215,10 +215,16 @@ public class UserController
      */
     @RequestMapping(value = "update_information.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<User> update_information(HttpSession session,User user)
+    public ServerResponse<User> update_information(HttpServletRequest httpServletRequest,User user)
     {
         //先检查用户是否登录
-        User currentUser = (User)session.getAttribute(Const.CURRENT_USER);
+        String loginToken = CookieUtil.readLoginToken(httpServletRequest);
+        if(StringUtils.isEmpty(loginToken))
+        {
+            return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
+        }
+        String userJsonStr = RedisPoolUtil.get(loginToken);
+        User currentUser = JsonUtil.string2Obj(userJsonStr , User.class);
         if(currentUser == null)
             return ServerResponse.createByErrorMessage("用户未登录");
 
@@ -232,7 +238,9 @@ public class UserController
         {
             //注意这个 ServerResponse 内的User对象是没有username的，我们将其存储到Session之前，需要设置username
             response.getData().setUsername(currentUser.getUsername());
-            session.setAttribute(Const.CURRENT_USER , response.getData());
+//            session.setAttribute(Const.CURRENT_USER , response.getData());
+
+            RedisPoolUtil.setEx(loginToken , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
         }
 
         //不管有没有更新成功，都要返回response
@@ -246,9 +254,15 @@ public class UserController
      */
     @RequestMapping(value = "get_information.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<User> get_information(HttpSession session)
+    public ServerResponse<User> get_information(HttpServletRequest httpServletRequest)
     {
-        User currentUser = (User)session.getAttribute(Const.CURRENT_USER);
+        String loginToken = CookieUtil.readLoginToken(httpServletRequest);
+        if(StringUtils.isEmpty(loginToken))
+        {
+            return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
+        }
+        String userJsonStr = RedisPoolUtil.get(loginToken);
+        User currentUser = JsonUtil.string2Obj(userJsonStr , User.class);
         if(currentUser == null)
         {
             //获取用户信息的时候，如果用户没有登录，需要强制登录

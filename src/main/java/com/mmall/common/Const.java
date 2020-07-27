@@ -17,6 +17,8 @@ public class Const
     //定义 type 的时候使用，判断是用户名还是email
     public static final String EMAIL = "email";
     public static final String USERNAME = "username";
+    //验证密码的时候使用的token的前缀名
+    public static final String TOKEN_PREFIX = "token_";
 
     //定义2个用户类型常量的接口
     public interface Role
