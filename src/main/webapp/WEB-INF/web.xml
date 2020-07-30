@@ -61,9 +61,17 @@
         <load-on-startup>1</load-on-startup>
     </servlet>
 
+    <!--<servlet-mapping>-->
+        <!--<servlet-name>dispatcher</servlet-name>-->
+
+        <!-- 拦截所有“.do”结尾的请求 -->
+        <!--<url-pattern>*.do</url-pattern>-->
+    <!--</servlet-mapping>-->
+
+    <!-- 我们该用 restful风格的代码，我们拦截所有的请求，包括静态资源也会拦截 -->
     <servlet-mapping>
         <servlet-name>dispatcher</servlet-name>
-        <url-pattern>*.do</url-pattern>
+        <url-pattern>/</url-pattern>
     </servlet-mapping>
 
 
@@ -78,6 +86,16 @@
         <url-pattern>*.do</url-pattern>
     </filter-mapping>
 
+    <!-- 测试SpringSession，使用Spring官方提供的过滤器，
+    这个 springSessionRepositoryFilter 过滤器 包含了时间过滤器SessionExpireFilter，还有我们需要的其他过滤器 -->
+    <!--<filter>-->
+        <!--<filter-name>springSessionRepositoryFilter</filter-name>-->
+        <!--<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>-->
+    <!--</filter>-->
+    <!--<filter-mapping>-->
+        <!--<filter-name>springSessionRepositoryFilter</filter-name>-->
+        <!--<url-pattern>*.do</url-pattern>-->
+    <!--</filter-mapping>-->
 
 </web-app>
 

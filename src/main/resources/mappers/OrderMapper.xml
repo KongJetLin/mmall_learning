@@ -233,5 +233,25 @@
     order by create_time desc
   </select>
 
+  <!--  根据订单状态和订单创建时间查找相应的订单，即查询创建时间在 date 时间之前，且订单状态为未付款的所有订单
+    1）这里订单的创建时间要小于等于date，即在date时间之前。“<=” 符号需要使用 <![CDATA[语句]]> 进行转义。
+    -->
+  <select id="selectOrderStatusByCreateTime" resultMap="BaseResultMap" parameterType="map">
+    select
+    <include refid="Base_Column_List"/>
+    from mmall_order
+    where status = #{status}
+    <![CDATA[
+      and create_time <= #{date}
+    ]]>
+    order by create_time desc
+  </select>
+
+  <!--  -->
+  <update id="closeOrderByOrderId" parameterType="int">
+    update mmall_order
+    set status = 0
+    where id = #{id}
+  </update>
 
 </mapper>

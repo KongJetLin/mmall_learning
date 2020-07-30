@@ -218,7 +218,7 @@
       and name like #{productName}
     </if>
     <if test="categoryIdList != null">
-      and category in
+      and category_id in
 
       <foreach collection="categoryIdList" item="item" index="index" open="(" separator="," close=")">
         #{item}
@@ -226,6 +226,22 @@
 
     </if>
 
+  </select>
+
+  <!--  根据产品id查询出产品的库存，参数类型与结果类型是Integer，这里用int或者Integer都一样，因为Mybatis都已经起别名。
+    另外，我们在查询产品库存的时候，必须加锁，这里使用悲观锁。
+    如果我们不加锁，有可能这时查询出来产品的库存为100，然后我们取消订单后，假设订单内产品数量为5，
+    那么我们后面会更新数据库该产品库存为：5+100 = 105。
+    如果在我们更新之前，又有人下单，假设其他人购买了5个产品，此时数据库实际库存是95，订单取消后应该是：100，而不是105.
+    如果加悲观锁，那么id=#{id}的那一行的数据就被我们锁定了（行锁），直到我们提交本次事务，即更新数据库，其他的查询这一行产品库存的语句才能执行！
+    我们在查询产品的时候，使用产品的id进行查询，产品id使用的是主键索引，因此此时锁住行！
+    -->
+  <select id="selectStockByProductId" parameterType="java.lang.Integer" resultType="int">
+    select
+    stock
+    from mmall_product
+    where id = #{id}
+    for update
   </select>
 
 </mapper>

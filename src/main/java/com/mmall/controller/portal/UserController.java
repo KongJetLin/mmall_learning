@@ -9,6 +9,7 @@ import com.mmall.service.IUserService;
 import com.mmall.util.CookieUtil;
 import com.mmall.util.JsonUtil;
 import com.mmall.util.RedisPoolUtil;
+import com.mmall.util.RedisShardedPoolUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -38,10 +39,14 @@ public class UserController
      * @param session
      * @return
      */
-    @RequestMapping(value = "login.do",method = RequestMethod.POST)
+    @RequestMapping(value = "login.do",method = RequestMethod.GET)
     @ResponseBody //将返回的数据序列化为JSON
     public ServerResponse<User> login(String username , String password , HttpSession session , HttpServletResponse httpServletResponse)
     {
+//        //测试全局异常
+//        int i = 0;
+//        int j = 666/i;
+
         ServerResponse<User> response = iUserService.login(username, password);
 
         //如果登录成功，将用户设置到Session中
@@ -56,7 +61,7 @@ public class UserController
              2步：将 sessionid 写入redis缓存、将保存sessionid 的cookie通过response返回给客户端浏览器！
              */
             CookieUtil.writeLoginToken(httpServletResponse , session.getId());//将保存有JSESSIONID的cookie写回浏览器
-            RedisPoolUtil.setEx(session.getId() , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
+            RedisShardedPoolUtil.setEx(session.getId() , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
         }
         //不管有没有登录成功，我们都将ServerResponse 对象 response 返回，这样前端会根据接收的信息展示不同的提示
         return response;
@@ -79,7 +84,7 @@ public class UserController
          */
         String loginToken = CookieUtil.readLoginToken(httpServletRequest);//先获取sessionid
         CookieUtil.delLoginToken(httpServletRequest , httpServletResponse);//将存储sessionid的cookie设置为过期
-        RedisPoolUtil.del(loginToken);//根据sessionid，将redis中的用户信息也删除
+        RedisShardedPoolUtil.del(loginToken);//根据sessionid，将redis中的用户信息也删除
 
 //        //将Session中的用户对象删除
 //        session.removeAttribute(Const.CURRENT_USER);
@@ -135,7 +140,7 @@ public class UserController
         }
 
         //如果获取到sessionid，从redis将User对象字符串取出，并反序列化
-        String userJsonStr = RedisPoolUtil.get(loginToken);//先通过jedis将相应的User对象字符串获取到
+        String userJsonStr = RedisShardedPoolUtil.get(loginToken);//先通过jedis将相应的User对象字符串获取到
         User user = JsonUtil.string2Obj(userJsonStr , User.class);//再将User字符反序列化为User对象
         if(user != null)
         {
@@ -223,7 +228,7 @@ public class UserController
         {
             return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
         }
-        String userJsonStr = RedisPoolUtil.get(loginToken);
+        String userJsonStr = RedisShardedPoolUtil.get(loginToken);
         User currentUser = JsonUtil.string2Obj(userJsonStr , User.class);
         if(currentUser == null)
             return ServerResponse.createByErrorMessage("用户未登录");
@@ -240,7 +245,7 @@ public class UserController
             response.getData().setUsername(currentUser.getUsername());
 //            session.setAttribute(Const.CURRENT_USER , response.getData());
 
-            RedisPoolUtil.setEx(loginToken , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
+            RedisShardedPoolUtil.setEx(loginToken , JsonUtil.obj2String(response.getData()) , Const.RedisCacheExTime.REDIS_SESSION_EXTIME);
         }
 
         //不管有没有更新成功，都要返回response
@@ -261,7 +266,7 @@ public class UserController
         {
             return ServerResponse.createByErrorMessage("用户未登录，无法获取当前用户的信息");
         }
-        String userJsonStr = RedisPoolUtil.get(loginToken);
+        String userJsonStr = RedisShardedPoolUtil.get(loginToken);
         User currentUser = JsonUtil.string2Obj(userJsonStr , User.class);
         if(currentUser == null)
         {

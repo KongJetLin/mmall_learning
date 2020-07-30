@@ -30,6 +30,7 @@ import com.mmall.vo.ShippingVo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.io.File;
@@ -786,6 +787,49 @@ public class OrderServiceImpl implements IOrderService
         if(order.getStatus() >= Const.OrderStatusEnum.PAID.getCode())
             return ServerResponse.createBySuccess();
         return ServerResponse.createByError();
+    }
+
+//-------------------------------------------------------------------------关闭订单
+
+    /**
+     * 这个方法用于设置在添加订单 hour 时间后，如果没有对订单进行付款，会对订单进行关闭
+     * @param hour
+     */
+    @Override
+    public void closeOrder(int hour)
+    {
+        //1、计算出当前时间之前的 hour 时间
+        Date closeDateTime = DateUtils.addHours(new Date(), -hour);
+
+        //2、查询出所有 closeDateTime之前，所有没有付款的订单，这些订单都需要进行关闭
+        List<Order> orderList = orderMapper.selectOrderStatusByCreateTime(Const.OrderStatusEnum.NO_PAY.getCode(), DateTimeUtil.dateToStr(closeDateTime));
+
+        //3、遍历订单集合，查询出每一个订单集合锁对应的订单项
+        for (Order order : orderList)
+        {
+            //3.1 根据订单号，查询出该订单所有的订单项集合
+            List<OrderItem> orderItemList = orderItemMapper.getByOrderNo(order.getOrderNo());
+            //3.2 对每一个订单项进行遍历
+            for (OrderItem orderItem : orderItemList)
+            {
+                //3.2.1 查询出该订单项对应的产品的库存
+                //一定要用主键where条件（走的索引），才会使用行锁，而不是锁表。同时必须是支持MySQL的InnoDB。
+                Integer stock = productMapper.selectStockByProductId(orderItem.getProductId());
+
+                //考虑到已生成的订单里的商品，被删除的情况
+                if(stock == 0)
+                    continue;//如果产品被删除，关单后不需要更新这个产品的数量
+                //更新该产品的库存
+                Product product = new Product();
+                product.setId(orderItem.getProductId());
+                product.setStock(stock+orderItem.getQuantity());//产品库存+订单项内产品的购买数量
+                //只有产品执行更新，此时事务提交（MYSQL默认更新自动提交事务），行锁才会解开，其他的查询语句才可以查询这个产品的行
+                productMapper.updateByPrimaryKeySelective(product);
+            }
+            //更新完订单内产品的库存，就可以关闭这个订单
+            orderMapper.closeOrderByOrderId(order.getId());
+            log.info("关闭订单OrderNo：{}",order.getOrderNo());
+        }
     }
 
 }

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="
+     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--  SpringSession 的配置，需要注入spring容器的对象有：
+        1）RedisHttpSessionConfiguration：即在用户登录的时候，会对Request与Response进行包装，成为 SessionRepositoryRequestWarpper 以及
+        SessionRepositoryResponseWarpper，在我们将用户信息存储到 session 的同时，SpringSession就会自动将Session中的信息存储到redis，
+        这个对象设置 session中的信息存储到 redis 中的相关属性（如有效时间等）；
+
+        2）JedisConnectionFactory：我们要将数据存储到redis，就需要jedis对象，JedisConnectionFactory 是用于连接redis的jedis对象的生产工厂，
+            我们在这里设置jedis连接到redis服务器的各类属性（端口、密码、jedisPoolConfig即jedis连接池配置等），
+            此处，我们还需要一个 jedisPoolConfig 对象，用于对jedis连接池的相关属性进行设置；
+
+        3）DefaultCookieSerializer：这里用于配置SpringSession 将sessionid传递到客户端时所使用的cookie的相关信息（包括cookie的名字、cookie作用的域名等）
+      -->
+
+    <!-- 配置Session信息存储到redis的相关属性 -->
+    <bean id="redisHttpSessionConfiguration" class="org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration">
+        <!--  设置session数据存储到redis的有效时间为30分钟 （默认也是30分钟） -->
+        <property name="maxInactiveIntervalInSeconds" value="1800" />
+    </bean>
+
+    <!--  这里用于配置SpringSession 将sessionid传递到客户端时所使用的cookie的相关信息（包括cookie的名字、cookie作用的域名等） -->
+    <bean id="defaultCookieSerializer" class="org.springframework.session.web.http.DefaultCookieSerializer">
+        <property name="domainName" value=".happymmall.com" />
+        <property name="useHttpOnlyCookie" value="true" />
+        <property name="cookiePath" value="/" />
+        <property name="cookieMaxAge" value="31536000" />
+    </bean>
+
+    <!--  配置redis的客户端jedis的连接池的相关配置属性  -->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="20"/>
+    </bean>
+
+    <!--  配置redis客户端jedis的连接工厂，里面配置了jedis连接到redis服务器的各类属性，包括端口、用户名、jedis连接池配置等等。
+        另外，这个版本的redis分布式对象 JedisShardInfo 不支持多个redis。
+        -->
+    <bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <property name="hostName" value="127.0.0.1" />
+        <!-- 这个版本的SpringSession不支持redis分布式，我们只使用一个redis -->
+        <property name="port" value="6379" />
+        <property name="poolConfig" ref="jedisPoolConfig" />
+    </bean>
+
+
+</beans>

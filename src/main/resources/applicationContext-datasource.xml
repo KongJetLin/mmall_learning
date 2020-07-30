@@ -9,8 +9,8 @@
      http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
      http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
 
-    <!-- 同样扫描“com.mmall” -->
-    <context:component-scan base-package="com.mmall" annotation-config="true"/>
+    <!-- 同样扫描“com.mmall”，其实 applicationContext.xml 已经扫描，这里不需要再扫描 -->
+    <!--<context:component-scan base-package="com.mmall" annotation-config="true"/>-->
 
     <!-- 引用数据库配置文件：datasource.properties -->
     <bean id="propertyConfigurer"
@@ -25,8 +25,6 @@
         <property name="fileEncoding" value="utf-8"/>
     </bean>
 
-
-    <context:property-placeholder location="classpath:datasource.properties"/>
 
     <!-- 数据库配置 -->
     <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
@@ -101,13 +99,13 @@
 
     <!-- 使用@Transactional进行声明式事务管理需要声明下面这行 -->
     <!--开启事务注解的支持，指定事务管理器-->
-    <tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+    <!--<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />-->
     <!-- 事务管理 -->
     <!--先创建spring自带的事务管理器的对象放入容器-->
-    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-        <property name="dataSource" ref="dataSource"/>
-        <property name="rollbackOnCommitFailure" value="true"/>
-    </bean>
+    <!--<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">-->
+        <!--<property name="dataSource" ref="dataSource"/>-->
+        <!--<property name="rollbackOnCommitFailure" value="true"/>-->
+    <!--</bean>-->
     <!-- 这样我们就配置了事务管理器，并开启事务注解，就可以在需要使用事务管理的java文件使用事务注解-->
 
 </beans>

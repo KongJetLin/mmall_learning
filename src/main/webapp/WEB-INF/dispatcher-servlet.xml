@@ -8,8 +8,11 @@
 	http://www.springframework.org/schema/mvc
 	http://www.springframework.org/schema/mvc/spring-mvc.xsd">
 
-    <!-- Springmvc 的配置， -->
-    <context:component-scan base-package="com.mmall" annotation-config="true"/>
+    <!-- Springmvc 的配置，use-default-filters="false"：将默认全局扫描关闭 -->
+    <context:component-scan base-package="com.mmall.controller" annotation-config="true" use-default-filters="false">
+        <!-- 配置只扫描Controller -->
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
 
     <!-- 开启对SpringMVC注解的支持——配置映射器与适配器 -->
     <mvc:annotation-driven>
@@ -41,5 +44,20 @@
         <property name="defaultEncoding" value="UTF-8"></property>
     </bean>
 
+    <!--配置拦截器-->
+    <mvc:interceptors>
+        <!-- 定义在这里的拦截器，所有的都会拦截-->
+        <mvc:interceptor>
+            <!-- 拦截/manage路径及其子路径下面的所有资源 -->
+            <mvc:mapping path="/manage/**"/>
+
+            <!-- 可以配置排除某些资源不拦截，我们这里不拦截登录操作，否则登录操作也会因为 user=null，而导致其被拦截，使得用户无法登录 -->
+            <!--<mvc:exclude-mapping path="/manage/user/login.do"/>-->
+
+            <!--配置拦截器对象，不设置id也可以，可以在拦截器对象类中，对拦截的请求进行处理-->
+            <bean class="com.mmall.controller.common.interceptor.AuthorityInterceptor" />
+        </mvc:interceptor>
+
+    </mvc:interceptors>
 
 </beans>

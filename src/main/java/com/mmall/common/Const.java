@@ -178,5 +178,10 @@ public class Const
         int REDIS_SESSION_EXTIME = 60 * 30;//Session的缓存时间为 30分钟
     }
 
+    //redis分布式锁的名称
+    public interface  REDIS_LOCK
+    {
+        String CLOSE_ORDER_TASK_LOCK = "CLOSE_ORDER_TASK_LOCK";//关闭订单的分布式锁
+    }
 
 }
