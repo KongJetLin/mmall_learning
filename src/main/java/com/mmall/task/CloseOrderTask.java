@@ -68,7 +68,7 @@ public class CloseOrderTask
 
          */
         Long setResult = RedisShardedPoolUtil.setnx(Const.REDIS_LOCK.CLOSE_ORDER_TASK_LOCK , String.valueOf(System.currentTimeMillis()+lockTimeout));
-        if(setResult!=null || setResult.intValue()==1)
+        if(setResult!=null && setResult.intValue()==1)
         {
             //如果返回值是1，代表设置成功，获取锁，然后通过 closeOrder 方法进行关单操作
             closeOrder(Const.REDIS_LOCK.CLOSE_ORDER_TASK_LOCK);
@@ -96,7 +96,7 @@ public class CloseOrderTask
 
         //2、进行关单
         int hour = Integer.parseInt(PropertiesUtil.getProperty("close.order.task.time.hour","2"));
-        iOrderService.closeOrder(hour);
+//        iOrderService.closeOrder(hour);
 
         //3、业务执行完（即当前的订单删除完），马上删除锁，以便后面的进程能够进来，删除后面的无效订单
         RedisShardedPoolUtil.del(Const.REDIS_LOCK.CLOSE_ORDER_TASK_LOCK);
